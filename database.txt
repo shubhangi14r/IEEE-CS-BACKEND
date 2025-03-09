@@ -1,0 +1,49 @@
+CREATE DATABASE IF NOT EXISTS movie_booking_db;
+USE movie_booking_db;
+
+-- Users Table
+CREATE TABLE users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    role ENUM('user', 'owner') NOT NULL
+);
+
+-- Movies Table
+CREATE TABLE movies (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR(100) NOT NULL,
+    duration INT NOT NULL -- Duration in minutes
+);
+
+-- Theaters Table
+CREATE TABLE theaters (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    location VARCHAR(255) NOT NULL
+);
+
+-- Shows Table
+CREATE TABLE shows (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    movie_id INT NOT NULL,
+    theater_id INT NOT NULL,
+    showtime DATETIME NOT NULL,
+    base_price DECIMAL(10,2) NOT NULL,
+    total_seats INT NOT NULL,
+    booked_seats INT DEFAULT 0,
+    FOREIGN KEY (movie_id) REFERENCES movies(id) ON DELETE CASCADE,
+    FOREIGN KEY (theater_id) REFERENCES theaters(id) ON DELETE CASCADE
+);
+
+-- Bookings Table
+CREATE TABLE bookings (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    show_id INT NOT NULL,
+    num_seats INT NOT NULL,
+    total_price DECIMAL(10,2) NOT NULL,
+    booking_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (show_id) REFERENCES shows(id) ON DELETE CASCADE
+);

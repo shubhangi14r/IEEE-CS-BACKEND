@@ -1,0 +1,71 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <mysql/mysql.h>
+
+#define DB_HOST "localhost"
+#define DB_USER "root"
+#define DB_PASS ""
+#define DB_NAME "movie_booking"
+
+void print_headers() {
+    printf("Content-type: application/json\n\n");
+}
+
+int main() {
+    print_headers();
+    
+    // Parse Query String
+    char *query = getenv("QUERY_STRING");
+    char user_id[10], show_id[10], num_seats[10];
+    
+    sscanf(query, "user_id=%[^&]&show_id=%[^&]&num_seats=%s", user_id, show_id, num_seats);
+    
+    // Connect to MySQL
+    MYSQL *conn;
+    conn = mysql_init(NULL);
+    if (!mysql_real_connect(conn, DB_HOST, DB_USER, DB_PASS, DB_NAME, 0, NULL, 0)) {
+        printf("{\"message\": \"Database connection failed\"}");
+        return 1;
+    }
+
+    // Get Base Price
+    char query_str[256];
+    sprintf(query_str, "SELECT base_price FROM shows WHERE id=%s", show_id);
+    
+    if (mysql_query(conn, query_str)) {
+        printf("{\"message\": \"Query failed\"}");
+        return 1;
+    }
+
+    MYSQL_RES *res = mysql_store_result(conn);
+    if (!res || mysql_num_rows(res) == 0) {
+        printf("{\"message\": \"Show not found\"}");
+        return 1;
+    }
+
+    MYSQL_ROW row = mysql_fetch_row(res);
+    float base_price = atof(row[0]);
+    mysql_free_result(res);
+
+    // Dynamic Pricing Logic
+    float final_price = base_price;
+    int seats = atoi(num_seats);
+    if (seats > 50) final_price *= 1.3;  // +30% for high demand
+    if (seats < 5) final_price *= 0.9;   // Discount for low demand
+
+    float total_price = final_price * seats;
+
+    // Insert Booking
+    sprintf(query_str, "INSERT INTO bookings (user_id, show_id, seats, price) VALUES (%s, %s, %d, %.2f)", 
+            user_id, show_id, seats, total_price);
+    
+    if (mysql_query(conn, query_str)) {
+        printf("{\"message\": \"Booking failed\"}");
+        return 1;
+    }
+
+    printf("{\"message\": \"Booking successful\", \"total_price\": \"%.2f\"}", total_price);
+    mysql_close(conn);
+    return 0;
+}
